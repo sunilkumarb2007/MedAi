@@ -122,84 +122,66 @@ async def chat(data: dict):
     if not user_input:
         return {"reply": "No input provided"}
 
-    # Layer 2 & 3: Rule Engine & Context Control
     intent = classify_intent(user_input, history)
 
-    # RULE: Immediate Greeting (No AI call)
+    # Greeting shortcut
     if intent == "greeting":
         return {"reply": "Hello 👋 How can I help you today?"}
 
-    # RULE: Context Decision
+    # Context handling
     if intent == "followup":
-        # Only followup gets access to context
         mapped_history = []
         for m in history[-2:]:
-            if m.get('role') in ['user', 'ai'] and m.get('content'):
-                role = 'assistant' if m.get('role') == 'ai' else 'user'
-                mapped_history.append({"role": role, "content": m.get('content')})
+            role = "assistant" if m.get("role") == "ai" else "user"
+            mapped_history.append({
+                "role": role,
+                "content": m.get("content")
+            })
     else:
-        # Medical and General start with fresh context
         mapped_history = []
 
-    async def generate():
-        # Layer 5: Response Formatter (System Prompts)
-        if intent == "medical":
-            sys_format = f"""You are a smart Medical AI assistant. 
-RULES:
-- Answer ONLY based on current user input.
-- DO NOT repeat previous answers.
-- Keep output clean, spaced, and professional.
-
-MEDICAL RESPONSE FORMAT:
-## 🧾 Summary
-## 🧠 Possible Causes
-## 🛡️ Precautions
-## 🪜 Steps
-## 💊 Medicines (basic only)
-## ⚠️ When to See a Doctor
-## 📊 Table 
-(Issue | Remedy | Note)
-
-Current User Input: {user_input}
-"""
-        else: # intent == "general" or "followup" or fallback
-            sys_format = f"""You are a smart AI assistant.
-RULES:
-- Provide a clear, informative answer.
-- Use bullet points if needed.
-- DO NOT use medical structure headers.
-- Answer accurately and concisely.
-
-Current User Input: {user_input}
-"""
-
-        # Layer 4: AI Call Layer
-        # Set to 300 tokens as requested for performance
-        stream = await asyncio.wait_for(client.chat.completions.create(
-            model="meta/llama3-8b-instruct",
-            messages=mapped_history + [{"role": "system", "content": sys_format}],
-            temperature=0.2, top_p=0.7, max_tokens=300, stream=True
-        ), timeout=15.0)
-        
-        async for chunk in stream:
-            if chunk.choices and chunk.choices[0].delta.content is not None:
-                yield chunk.choices[0].delta.content
-
     try:
-        full_reply = ""
-        async for text_chunk in generate():
-            full_reply += text_chunk
-        
-        if not full_reply:
-             return {"reply": "I'm not sure how to answer that. Could you try rephrasing?"}
-             
-        return {"reply": full_reply}
+        # Prompt
+        if intent == "medical":
+            sys_prompt = f"""
+You are a professional medical AI.
 
-    except asyncio.TimeoutError:
-        return {"reply": "Request timed out. Please try again."}
+Give structured response:
+- Summary
+- Causes
+- Precautions
+- Steps
+- Medicines
+- When to see doctor
+
+User: {user_input}
+"""
+        else:
+            sys_prompt = f"""
+You are a helpful assistant.
+
+Answer clearly and concisely.
+
+User: {user_input}
+"""
+
+        completion = await client.chat.completions.create(
+            model="meta/llama3-8b-instruct",
+            messages=mapped_history + [
+                {"role": "system", "content": sys_prompt}
+            ],
+            temperature=0.2,
+            max_tokens=300
+        )
+
+        reply = completion.choices[0].message.content
+
+        return {"reply": reply}
+
     except Exception as e:
-        print("AI SYSTEM ERROR:", str(e))
-        return {"reply": "I'm not sure about that. Could you clarify?"}
+        print("ERROR:", e)
+        return {"reply": "Something went wrong. Please try again."}
+
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):

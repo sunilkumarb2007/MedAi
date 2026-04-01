@@ -167,35 +167,82 @@ export default function Chat({ sidebarOpen, setSidebarOpen, chats, activeChatId,
 
       if (file) {
         const upRes = await uploadFile(file);
-        const finalMsg = { ...aiPlaceholder, content: upRes.reply || 'File processed.', statusText: null };
-        const finalMessages = updatedMessages.map(m => m.id === newMessageId ? finalMsg : m);
-        setMessages(finalMessages);
-        updateGlobalHistory(finalMessages);
+        const finalMsg = { 
+            id: newMessageId, 
+            role: 'ai', 
+            content: upRes.reply || 'File processed.', 
+            statusText: null 
+        };
+        
+        setMessages(prev => {
+            const filtered = prev.filter(m => m.id !== newMessageId);
+            return [...filtered, finalMsg];
+        });
+        
+        // Update global history with the final state
+        setChats(prev => prev.map(chat => {
+            if (chat.id === activeChatId) {
+                const newMsgs = [...chat.messages, userMsg, finalMsg];
+                return { ...chat, messages: newMsgs };
+            }
+            return chat;
+        }));
+        
         setFile(null);
       } else {
-        const historyContext = updatedMessages.map(m => ({ role: m.role, content: m.content }));
+        const historyContext = updatedMessages.map(m => ({ 
+            role: m.role === 'ai' ? 'assistant' : 'user', 
+            content: m.content 
+        }));
+        
         const response = await fetchMessage(currentInput, historyContext, abortControllerRef.current.signal);
         const finalAIContent = response.reply || "Something went wrong.";
         
-        const finalMsg = { ...aiPlaceholder, content: finalAIContent, statusText: null };
-        const finalMessages = [...updatedMessages, finalMsg];
-        
-        setMessages(finalMessages);
-        updateGlobalHistory(finalMessages);
+        const finalMsg = { 
+            id: newMessageId, 
+            role: 'ai', 
+            content: finalAIContent, 
+            statusText: null 
+        };
+
+        setMessages(prev => {
+            // Replace placeholder with actual response
+            return prev.map(m => m.id === newMessageId ? finalMsg : m);
+        });
+
+        // Sync with global history
+        setChats(prev => prev.map(chat => {
+          if (chat.id === activeChatId) {
+            const currentMsgs = chat.messages || [];
+            // Ensure we don't duplicate user message if it's already there
+            const hasUserMsg = currentMsgs.some(m => m.id === userMsg.id);
+            const baseMsgs = hasUserMsg ? currentMsgs : [...currentMsgs, userMsg];
+            return { 
+              ...chat, 
+              messages: [...baseMsgs, finalMsg],
+              title: dynamicTitle || chat.title
+            };
+          }
+          return chat;
+        }));
       }
     } catch (error) {
        if (error.name === 'AbortError') {
            console.log("Stream stopped");
        } else {
-           const errMsg = { ...aiPlaceholder, content: "Something went wrong. Please try again.", statusText: null };
-           const finalMessages = updatedMessages.map(m => m.id === newMessageId ? errMsg : m);
-           setMessages(finalMessages);
-           updateGlobalHistory(finalMessages);
+           const errMsg = { 
+               id: newMessageId, 
+               role: 'ai', 
+               content: "Something went wrong. Please try again.", 
+               statusText: null 
+           };
+           setMessages(prev => prev.map(m => m.id === newMessageId ? errMsg : m));
        }
     } finally {
       setLoading(false);
       abortControllerRef.current = null;
     }
+
   };
 
   return (
