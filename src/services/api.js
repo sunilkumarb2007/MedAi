@@ -1,6 +1,7 @@
 export const checkInteractions = async (drugs) => {
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
   try {
-    const res = await fetch("http://localhost:8000/check", {
+    const res = await fetch(`${API_URL}/check`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"

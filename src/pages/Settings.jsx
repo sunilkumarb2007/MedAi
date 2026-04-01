@@ -17,9 +17,10 @@ export default function Settings() {
   useEffect(() => {
     let interval;
     const checkApi = async () => {
+      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
       const start = Date.now();
       try {
-        const res = await fetch("http://localhost:8000/", { cache: "no-store", method: "GET" });
+        const res = await fetch(`${API_URL}/`, { cache: "no-store", method: "GET" });
         if (res.ok) {
           setApiStatus('Live');
           setApiPing(Date.now() - start);
