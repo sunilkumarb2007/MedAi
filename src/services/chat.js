@@ -1,4 +1,4 @@
-export const streamMessage = async function*(message, history = [], abortSignal = null, model_version = "v2") {
+export const fetchMessage = async (message, history = [], abortSignal = null, model_version = "v2") => {
   const API_URL = import.meta.env.VITE_API_URL || "https://medai-ve79.onrender.com";
   const res = await fetch(`${API_URL}/chat`, {
     method: "POST",
@@ -13,30 +13,7 @@ export const streamMessage = async function*(message, history = [], abortSignal 
     throw new Error(`API error: ${res.status}`);
   }
 
-  const reader = res.body.getReader();
-  const decoder = new TextDecoder();
-  let buffer = "";
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    
-    buffer += decoder.decode(value, { stream: true });
-    
-    let boundary = buffer.indexOf('\n\n');
-    while (boundary !== -1) {
-       const chunkText = buffer.slice(0, boundary);
-       buffer = buffer.slice(boundary + 2);
-       
-       if (chunkText.startsWith('data: ')) {
-           try {
-               const payload = JSON.parse(chunkText.slice(6));
-               yield payload;
-           } catch (e) { }
-       }
-       boundary = buffer.indexOf('\n\n');
-    }
-  }
+  return await res.json();
 };
 
 export const uploadFile = async (file) => {

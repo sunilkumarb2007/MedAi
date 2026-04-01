@@ -1,5 +1,4 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
@@ -128,9 +127,7 @@ async def chat(data: dict):
 
     # RULE: Immediate Greeting (No AI call)
     if intent == "greeting":
-        async def stream_greeting():
-            yield f'data: {json.dumps({"type": "chunk", "text": "Hello 👋 How can I help you today?"})}\n\n'
-        return StreamingResponse(stream_greeting(), media_type="text/event-stream")
+        return {"reply": "Hello 👋 How can I help you today?"}
 
     # RULE: Context Decision
     if intent == "followup":
@@ -145,10 +142,9 @@ async def chat(data: dict):
         mapped_history = []
 
     async def generate():
-        try:
-            # Layer 5: Response Formatter (System Prompts)
-            if intent == "medical":
-                sys_format = f"""You are a smart Medical AI assistant. 
+        # Layer 5: Response Formatter (System Prompts)
+        if intent == "medical":
+            sys_format = f"""You are a smart Medical AI assistant. 
 RULES:
 - Answer ONLY based on current user input.
 - DO NOT repeat previous answers.
@@ -166,8 +162,8 @@ MEDICAL RESPONSE FORMAT:
 
 Current User Input: {user_input}
 """
-            else: # intent == "general" or "followup" or fallback
-                sys_format = f"""You are a smart AI assistant.
+        else: # intent == "general" or "followup" or fallback
+            sys_format = f"""You are a smart AI assistant.
 RULES:
 - Provide a clear, informative answer.
 - Use bullet points if needed.
@@ -177,27 +173,33 @@ RULES:
 Current User Input: {user_input}
 """
 
-            # Layer 4: AI Call Layer
-            # Set to 300 tokens as requested for performance
-            stream = await asyncio.wait_for(client.chat.completions.create(
-                model="meta/llama3-8b-instruct",
-                messages=mapped_history + [{"role": "system", "content": sys_format}],
-                temperature=0.2, top_p=0.7, max_tokens=300, stream=True
-            ), timeout=15.0)
-            
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content is not None:
-                    txt = chunk.choices[0].delta.content
-                    yield f'data: {json.dumps({"type": "chunk", "text": txt})}\n\n'
+        # Layer 4: AI Call Layer
+        # Set to 300 tokens as requested for performance
+        stream = await asyncio.wait_for(client.chat.completions.create(
+            model="meta/llama3-8b-instruct",
+            messages=mapped_history + [{"role": "system", "content": sys_format}],
+            temperature=0.2, top_p=0.7, max_tokens=300, stream=True
+        ), timeout=15.0)
+        
+        async for chunk in stream:
+            if chunk.choices and chunk.choices[0].delta.content is not None:
+                yield chunk.choices[0].delta.content
 
-        except asyncio.TimeoutError:
-            yield f'data: {json.dumps({"type": "error", "msg": "Request timed out. Please try again."})}\n\n'
-        except Exception as e:
-            # FAILSAFE: Default error message
-            print("AI SYSTEM ERROR:", str(e))
-            yield f'data: {json.dumps({"type": "error", "msg": "I\'m not sure about that. Could you clarify?"})}\n\n'
+    try:
+        full_reply = ""
+        async for text_chunk in generate():
+            full_reply += text_chunk
+        
+        if not full_reply:
+             return {"reply": "I'm not sure how to answer that. Could you try rephrasing?"}
+             
+        return {"reply": full_reply}
 
-    return StreamingResponse(generate(), media_type="text/event-stream")
+    except asyncio.TimeoutError:
+        return {"reply": "Request timed out. Please try again."}
+    except Exception as e:
+        print("AI SYSTEM ERROR:", str(e))
+        return {"reply": "I'm not sure about that. Could you clarify?"}
 
 @app.post("/upload")
 async def upload_file(file: UploadFile = File(...)):

@@ -3,7 +3,7 @@ import { Typography, Input, Tooltip, Button, message } from 'antd';
 import { Paperclip, Mic, Send, Square, Moon, Sun, Copy, Bookmark, Sparkles, PanelLeft } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { streamMessage, uploadFile } from '../services/chat';
+import { fetchMessage, uploadFile } from '../services/chat';
 
 // Check for Browser Voice Support
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -174,29 +174,14 @@ export default function Chat({ sidebarOpen, setSidebarOpen, chats, activeChatId,
         setFile(null);
       } else {
         const historyContext = updatedMessages.map(m => ({ role: m.role, content: m.content }));
-        const stream = streamMessage(currentInput, historyContext, abortControllerRef.current.signal);
-        let currentText = "";
+        const response = await fetchMessage(currentInput, historyContext, abortControllerRef.current.signal);
+        const finalAIContent = response.reply || "Something went wrong.";
         
-        for await (const chunk of stream) {
-            if (chunk.type === 'status') {
-               setMessages(prev => prev.map(m => m.id === newMessageId ? { ...m, statusText: chunk.msg } : m));
-            } else if (chunk.type === 'chunk') {
-               currentText += chunk.text;
-               setMessages(prev => prev.map(m => m.id === newMessageId ? { ...m, content: currentText, statusText: null } : m));
-            } else if (chunk.type === 'error') {
-               setMessages(prev => prev.map(m => m.id === newMessageId ? { ...m, content: chunk.msg, statusText: null } : m));
-            }
-        }
+        const finalMsg = { ...aiPlaceholder, content: finalAIContent, statusText: null };
+        const finalMessages = [...updatedMessages, finalMsg];
         
-        // Final Sync to Global
-        // FIXED: Removed side effect from reducer. Using setMessages completion or local state.
-        setMessages(prev => {
-           // We can't call updateGlobalHistory here safely.
-           return prev;
-        });
-        
-        // Call it outside the updater
-        updateGlobalHistory([...updatedMessages, { ...aiPlaceholder, content: currentText, statusText: null }]);
+        setMessages(finalMessages);
+        updateGlobalHistory(finalMessages);
       }
     } catch (error) {
        if (error.name === 'AbortError') {
