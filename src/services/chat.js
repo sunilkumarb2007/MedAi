@@ -1,5 +1,5 @@
 export const streamMessage = async function*(message, history = [], abortSignal = null, model_version = "v2") {
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_URL = import.meta.env.VITE_API_URL || "https://medai-ve79.onrender.com";
   const res = await fetch(`${API_URL}/chat`, {
     method: "POST",
     headers: {
@@ -40,11 +40,12 @@ export const streamMessage = async function*(message, history = [], abortSignal 
 };
 
 export const uploadFile = async (file) => {
+  const API_URL = import.meta.env.VITE_API_URL || "https://medai-ve79.onrender.com";
   try {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch("http://localhost:8000/upload", {
+    const res = await fetch(`${API_URL}/upload`, {
       method: "POST",
       body: formData,
     });

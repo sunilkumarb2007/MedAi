@@ -17,7 +17,7 @@ export default function Settings() {
   useEffect(() => {
     let interval;
     const checkApi = async () => {
-      const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const API_URL = import.meta.env.VITE_API_URL || "https://medai-ve79.onrender.com";
       const start = Date.now();
       try {
         const res = await fetch(`${API_URL}/`, { cache: "no-store", method: "GET" });
