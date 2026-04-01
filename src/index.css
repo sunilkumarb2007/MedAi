@@ -1,0 +1,105 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .premium-markdown strong {
+    @apply font-semibold bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-1.5 py-0.5 rounded;
+  }
+}
+
+.material-symbols-outlined {
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+  vertical-align: middle;
+}
+
+/* --- Standard UI Animations --- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideInFromBottom {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes zoomIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-in {
+  animation-duration: 300ms;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+
+.fade-in { animation-name: fadeIn; }
+.slide-in-from-bottom-2 { animation-name: slideInFromBottom; }
+.zoom-in { animation-name: zoomIn; }
+
+/* --- Custom Scrollbar --- */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 5px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 10px;
+}
+
+.dark .custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #374151;
+}
+
+/* Sidebar History Item Tooltip/Actions */
+.group:hover .opacity-0 {
+  opacity: 1;
+}
+
+/* Ensure the layout is solid */
+.ant-layout-sider-children {
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+/* Base AntD Overrides for God-Tier Look */
+.ant-layout {
+  background: transparent !important;
+}
+
+/* Notion/ChatGPT Style Markdown DOM overrides (Cards replacement) */
+.premium-markdown h1, .premium-markdown h2, .premium-markdown h3 {
+  @apply font-semibold mb-4 flex items-center gap-2;
+  color: inherit;
+}
+.premium-markdown h2 {
+  @apply text-xl pb-2 border-b border-border-light dark:border-border-dark;
+}
+.premium-markdown p {
+  @apply leading-relaxed mb-4 text-[15px] sm:text-[16px] text-text-light dark:text-text-dark;
+}
+.premium-markdown ul {
+  @apply space-y-2 mb-4 list-disc pl-5 text-[15px] sm:text-[16px] text-text-light dark:text-text-dark;
+}
+
+/* Clean Table Resets */
+.premium-markdown table {
+  @apply w-full text-left text-[14px] rounded-md overflow-hidden border border-border-light dark:border-border-dark my-4;
+}
+.premium-markdown th {
+  @apply bg-chat-light dark:bg-chat-dark font-semibold p-3 border-b border-border-light dark:border-border-dark text-text-light dark:text-text-dark;
+}
+.premium-markdown td {
+  @apply p-3 border-b border-border-light dark:border-border-dark last:border-0 text-text-light dark:text-text-dark;
+}
+.premium-markdown tr {
+  @apply even:bg-chat-light dark:even:bg-white/5;
+}
