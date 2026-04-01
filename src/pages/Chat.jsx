@@ -196,7 +196,7 @@ export default function Chat({ sidebarOpen, setSidebarOpen, chats, activeChatId,
         }));
         
         const response = await fetchMessage(currentInput, historyContext, abortControllerRef.current.signal);
-        const finalAIContent = response.reply || "Something went wrong.";
+        const finalAIContent = response.reply || "No response";
         
         const finalMsg = { 
             id: newMessageId, 
@@ -233,7 +233,7 @@ export default function Chat({ sidebarOpen, setSidebarOpen, chats, activeChatId,
            const errMsg = { 
                id: newMessageId, 
                role: 'ai', 
-               content: "Something went wrong. Please try again.", 
+               content: "Server error. Try again.", 
                statusText: null 
            };
            setMessages(prev => prev.map(m => m.id === newMessageId ? errMsg : m));
@@ -242,6 +242,7 @@ export default function Chat({ sidebarOpen, setSidebarOpen, chats, activeChatId,
       setLoading(false);
       abortControllerRef.current = null;
     }
+
 
   };
 
@@ -329,7 +330,13 @@ export default function Chat({ sidebarOpen, setSidebarOpen, chats, activeChatId,
               )}
             </div>
           ))}
+          {loading && (
+            <div className="flex gap-4 w-full text-[14px] text-text-secondary italic pl-12 animate-pulse">
+                Thinking...
+            </div>
+          )}
           <div ref={messagesEndRef} className="h-4" />
+
         </div>
       </div>
 

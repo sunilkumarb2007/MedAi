@@ -122,6 +122,8 @@ async def chat(data: dict):
     if not user_input:
         return {"reply": "No input provided"}
 
+    print("INPUT:", user_input)
+
     intent = classify_intent(user_input, history)
 
     # Greeting shortcut
@@ -165,22 +167,30 @@ Answer clearly and concisely.
 User: {user_input}
 """
 
-        completion = await client.chat.completions.create(
-            model="meta/llama3-8b-instruct",
-            messages=mapped_history + [
-                {"role": "system", "content": sys_prompt}
-            ],
-            temperature=0.2,
-            max_tokens=300
+        # 🔥 10s HARD TIMEOUT
+        completion = await asyncio.wait_for(
+            client.chat.completions.create(
+                model="meta/llama3-8b-instruct",
+                messages=mapped_history + [
+                    {"role": "system", "content": sys_prompt}
+                ],
+                temperature=0.2,
+                max_tokens=300
+            ),
+            timeout=10
         )
 
         reply = completion.choices[0].message.content
+        print("REPLY:", reply)
 
         return {"reply": reply}
 
+    except asyncio.TimeoutError:
+        return {"reply": "Server is busy. Please try again."}
     except Exception as e:
         print("ERROR:", e)
         return {"reply": "Something went wrong. Please try again."}
+
 
 
 @app.post("/upload")
