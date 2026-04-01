@@ -6,10 +6,8 @@ import itertools
 import os
 import json
 import asyncio
-from dotenv import load_dotenv
 from openai import AsyncOpenAI
 
-load_dotenv()
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
 
 if not NVIDIA_API_KEY:
@@ -142,10 +140,9 @@ async def chat(data: dict):
     else:
         mapped_history = []
 
-    try:
-        # Prompt
-        if intent == "medical":
-            sys_prompt = f"""
+    # Prompt
+    if intent == "medical":
+        sys_prompt = f"""
 You are a professional medical AI.
 
 Give structured response:
@@ -158,8 +155,8 @@ Give structured response:
 
 User: {user_input}
 """
-        else:
-            sys_prompt = f"""
+    else:
+        sys_prompt = f"""
 You are a helpful assistant.
 
 Answer clearly and concisely.
@@ -167,7 +164,8 @@ Answer clearly and concisely.
 User: {user_input}
 """
 
-        # 🔥 10s HARD TIMEOUT
+    # 🔥 10s HARD TIMEOUT
+    try:
         completion = await asyncio.wait_for(
             client.chat.completions.create(
                 model="meta/llama3-8b-instruct",
@@ -175,21 +173,21 @@ User: {user_input}
                     {"role": "system", "content": sys_prompt}
                 ],
                 temperature=0.2,
-                max_tokens=300
+                max_tokens=200
             ),
             timeout=10
         )
 
         reply = completion.choices[0].message.content
-        print("REPLY:", reply)
+
+        if not reply:
+            reply = "I couldn't generate a response. Try again."
 
         return {"reply": reply}
 
-    except asyncio.TimeoutError:
-        return {"reply": "Server is busy. Please try again."}
     except Exception as e:
-        print("ERROR:", e)
-        return {"reply": "Something went wrong. Please try again."}
+        print("🔥 ERROR:", str(e))
+        return {"reply": "AI server issue. Please try again in a moment."}
 
 
 
